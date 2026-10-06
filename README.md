@@ -1,31 +1,48 @@
-# Kino XII — Redberry Bootcamp XII (Vanilla JS)
+# Kino XII — Cinema Booking App
 
-Full cinema booking app. Vanilla JS + vanilla CSS only. No frameworks.
-Design: Figma `Redberry-Bootcamp-XII` (Archivo, #070C1C / #1E2031 / #2A2C3D, brand #EC3013).
-API: `https://api.kinoxii.redberryinternship.ge/api` — test account `jane@kinoxii.test / password`.
+A single-page cinema booking app: browse what's on, filter showtimes, pick seats on a real hall map, check out, and manage tickets — all in the browser.
 
-## Run
-No build. Static files only.
-- VS Code Live Server → open `index.html` → Go Live
-- or `npx serve "D:\niko\Redberry"` → http://localhost:3000
-- Routes: `#/`, `#/sessions?...`, `#/movie/:slug`, `#/profile`
+**Live:** https://nikoo-dev.github.io/kino-xii/
 
-## Features (PDFs 1-11 + Figma)
-- Navbar: KINO XII, SESSIONS, search pill with prompt/results/no-results overlay, Sign up red / Log in white, authorized MS avatar + name + orange dot if incomplete
-- Home: featured hero (4 films, 7s rotate, arrows/dots), Recently viewed (localStorage, authorized), Now Playing cards, Coming Soon + Notify Me (auth-gated, 201 idempotent)
-- Sessions: venue/date(7d)/format(dynamic by venue)/language/time filters, search, sort, 10 films/page pager, sold-out dimmed, URL query sync, skeletons, empty/error/retry, page reset on filter change
-- Movie: backdrop hero, Details column (director/cast/duration/release/formats/from price/rating note), 7-day picker with availableDates disabling, sessions grouped by venue
-- Booking modal (1146px): SEATS/CHECKOUT steps, SCREEN bar, sections→rows→seats from API (aisleAfter spacers, row labels from data), legend, max 3, per-seat pills Child 60% / Student 75% / Adult 100% (child hidden for 16+/18+), live subtotal, POST holds → 8-min timer from expiresAt, checkout prefill + card validation, POST orders, 409 contested handling (mark sold, keep rest, refetch), 422 field vs message handling, DELETE hold on close (not on back), confirmation with reference
-- Auth: login/register modals (475px), blur green/red validation, avatar upload preview (jpg/png/webp), uniqueness errors, pending-action replay, 401 replay
-- Profile: tabs Personal Information / My Tickets + Upcoming/Past subtabs with counts, fullName 3-50 / mobile 5XXXXXXXX / dob 12+ / preferred venue, email read-only, Save disabled until dirty, yellow/green dot + banners, wide order cards (ORDER #ref, DATE/VENUE/FORMAT, SEATS badges, Total paid, Refund with 2h isRefundable gate + confirm + server re-render)
-- Global: dim/blur overlay, Esc/overlay/X close, buttons disabled in-flight, server truth after mutation, money as plain lari numbers
+## Features
+
+- **Home** — featured films hero carousel, recently viewed, now playing grid, coming soon with "Notify me" subscriptions
+- **Sessions** — filter by venue, date, format, language and time of day; sort, search, and shareable URL state; paginated film groups with live seat availability
+- **Movie details** — synopsis, cast, formats, rating note, and per-date showtimes grouped by venue
+- **2-step booking** — interactive seat map rendered from the API (sections, rows, aisles), ticket types (Adult / Student / Child) with live pricing, 8-minute seat hold with countdown, checkout, and an order confirmation with reference code
+- **Auth** — sign up (with optional avatar) and log in; protected actions resume automatically after signing in
+- **Profile & tickets** — edit personal info with validation, plus upcoming / past ticket lists with refund support
+
+## Tech
+
+Vanilla JavaScript, vanilla CSS, no frameworks. Data comes from a REST cinema API (`fetch`, token auth).
+
+## Run it
+
+No build step — serve the folder statically:
+
+```bash
+npx serve .
+```
+
+then open http://localhost:3000
+
+## Project layout
+
+```
+index.html          app shell (navbar, search, modal + toast roots)
+css/styles.css      design system (Archivo type, dark theme tokens)
+js/app.js           router (#/, #/sessions, #/movie/:slug, #/profile), navbar, search
+js/api.js           fetch wrapper, token + pending-action handling
+js/store.js         session + cached filter options
+js/pages/           home, sessions, movie, profile
+js/components/      modal, auth, booking (2-step purchase flow)
+```
 
 ## Deploy
-Static host `index.html/css/js`:
-- Vercel: `vercel --prod` (vercel.json included)
-- Netlify: drag folder or `netlify deploy --prod` (netlify.toml included)
-- GitHub Pages: push, Settings → Pages → /(root)
 
-## Commits / video
-Make 8+ commits (scaffold, styles, auth, home, sessions, movie, booking, profile, polish). Record Loom walkthrough (optional but graded).
-Deadline per PDF8: Oct 11 23:59:59. Test at 1920x1080.
+Any static host works (the repo includes `vercel.json` and `netlify.toml`):
+
+```bash
+npx vercel --prod
+```
