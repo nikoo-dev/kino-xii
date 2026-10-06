@@ -1,7 +1,8 @@
 import { apiFetch, fieldErrors } from "../api.js";
 import { store } from "../store.js";
 import { el, esc, toast } from "../utils.js";
-import { setLoading } from "../components/modal.js";
+import { fullNameError, mobileError, dobError } from "../validation.js";
+import { setLoading, attachBlurValidation } from "../components/modal.js";
 import { requireAuthOrModal } from "../components/auth.js";
 
 export async function renderProfile(root) {
@@ -37,11 +38,43 @@ export async function renderProfile(root) {
       <div class="form-footer"><button class="btn primary" data-save disabled style="width:auto;padding:12px 32px">Save changes</button></div>
     </div></div>`;
     const saveBtn = bodyEl.querySelector("[data-save]");
-    const snap0 = bodyEl.querySelector("[name=fullName]").value + bodyEl.querySelector("[name=mobileNumber]").value + bodyEl.querySelector("[name=dateOfBirth]").value;
+    const fields = {
+      fullName: bodyEl.querySelector("[name=fullName]"),
+      mobileNumber: bodyEl.querySelector("[name=mobileNumber]"),
+      dateOfBirth: bodyEl.querySelector("[name=dateOfBirth]"),
+    };
+    const validators = {
+      fullName: (v) => fullNameError(v),
+      mobileNumber: (v) => mobileError(v),
+      dateOfBirth: (v) => dobError(v),
+    };
+    const checks = Object.fromEntries(
+      Object.entries(fields).map(([k, inp]) => [k, attachBlurValidation(inp, validators[k])])
+    );
+    const snap0 = JSON.stringify(snapshot());
+    function snapshot() {
+      return {
+        fullName: fields.fullName.value,
+        mobileNumber: fields.mobileNumber.value,
+        dateOfBirth: fields.dateOfBirth.value,
+        preferredVenueId: bodyEl.querySelector("[name=preferredVenueId]").value,
+      };
+    }
+    function refreshSave() {
+      const dirty = JSON.stringify(snapshot()) !== snap0;
+      const valid = !Object.entries(fields).some(([k, inp]) => validators[k](inp.value));
+      saveBtn.disabled = !(dirty && valid);
+    }
     bodyEl.querySelectorAll("input,select").forEach((i) => i.addEventListener("input", () => {
-      const s = bodyEl.querySelector("[name=fullName]").value + bodyEl.querySelector("[name=mobileNumber]").value + bodyEl.querySelector("[name=dateOfBirth]").value;
-      saveBtn.disabled = s === snap0;
+      // live-clear a shown error once the value becomes valid
+      const m = Object.entries(fields).find(([, inp]) => inp === i);
+      if (m && !validators[m[0]](i.value)) {
+        i.classList.remove("invalid"); i.classList.add("valid");
+        i.parentElement.querySelector(".err").textContent = "";
+      }
+      refreshSave();
     }));
+    refreshSave();
     saveBtn.onclick = async (e) => {
       const btn = e.currentTarget;
       setLoading(btn, true, "Saving...");
@@ -61,7 +94,7 @@ export async function renderProfile(root) {
         const fe = fieldErrors(err);
         if (fe) for (const [k, msgs] of Object.entries(fe)) {
           const inp = bodyEl.querySelector(`[name=${k}]`);
-          if (inp) inp.parentElement.querySelector(".err").textContent = msgs.join(", ");
+          if (inp) { inp.classList.remove("valid"); inp.classList.add("invalid"); inp.parentElement.querySelector(".err").textContent = msgs.join(", "); }
         }
         else toast(err.message);
       } finally { setLoading(btn, false); }

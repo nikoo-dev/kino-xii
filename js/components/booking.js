@@ -1,7 +1,8 @@
 import { apiFetch, fieldErrors } from "../api.js";
 import { store } from "../store.js";
 import { el, esc, toast } from "../utils.js";
-import { openModal, setLoading } from "./modal.js";
+import { fullNameError, emailError, mobileError, cardError, expiryError, cvvError } from "../validation.js";
+import { openModal, setLoading, attachBlurValidation } from "./modal.js";
 import { requireAuthOrModal } from "./auth.js";
 
 export async function openBookingModal(sessionId) {
@@ -150,9 +151,18 @@ export async function openBookingModal(sessionId) {
     };
     if (state.timer) clearInterval(state.timer);
     state.timer = setInterval(tick, 1000); tick();
+    const checks = {
+      fullName: attachBlurValidation(box.querySelector("[name=fullName]"), fullNameError),
+      email: attachBlurValidation(box.querySelector("[name=email]"), emailError),
+      mobileNumber: attachBlurValidation(box.querySelector("[name=mobileNumber]"), mobileError),
+      cardNumber: attachBlurValidation(box.querySelector("[name=cardNumber]"), cardError),
+      expiry: attachBlurValidation(box.querySelector("[name=expiry]"), expiryError),
+      cvv: attachBlurValidation(box.querySelector("[name=cvv]"), cvvError),
+    };
     box.querySelector("[data-back]").onclick = () => { clearInterval(state.timer); renderStep1(); };
     box.querySelector("[data-pay]").onclick = async (e) => {
       const btn = e.currentTarget;
+      if (Object.values(checks).some((fn) => fn())) return;
       const g = (n) => box.querySelector(`[name=${n}]`).value.trim();
       setLoading(btn, true, "Paying...");
       try {

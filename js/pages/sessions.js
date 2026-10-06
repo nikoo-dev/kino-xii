@@ -65,12 +65,20 @@ export async function renderSessions(root) {
       ${opts.languages.map((l) => `<label class="check"><input type="checkbox" data-l="${esc(l.slug)}" ${q.languages.includes(l.slug) ? "checked" : ""} /> ${esc(l.name)}</label>`).join("")}
       <h3>Time of day</h3>
       ${timeBands.map((b) => `<label class="check"><input type="checkbox" data-b="${esc(b.id)}" ${q.bands.includes(b.id) ? "checked" : ""} /> ${esc(b.label)}</label>`).join("")}
-      <div class="meta" style="margin-top:16px">${q.venues.length + q.formats.length + q.languages.length + q.bands.length} filters active</div>`;
+      <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn ghost small" data-clear ${q.venues.length + q.formats.length + q.languages.length + q.bands.length + (q.search ? 1 : 0) ? "" : "disabled"}>Clear All Filters</button>
+        <span class="meta">${q.venues.length + q.formats.length + q.languages.length + q.bands.length + (q.search ? 1 : 0)} filters active</span>
+      </div>`;
     fEl.querySelectorAll("[data-v]").forEach((c) => c.onchange = () => { const s = c.dataset.v; q.venues = c.checked ? [...q.venues, s] : q.venues.filter((x) => x !== s); q.page = 1; writeQuery(q); drawFilters(); load(); });
     fEl.querySelectorAll("[data-date]").forEach((b) => b.onclick = () => { q.date = b.dataset.date; q.page = 1; writeQuery(q); drawFilters(); load(); });
     fEl.querySelectorAll("[data-f]").forEach((c) => c.onchange = () => { const s = c.dataset.f; q.formats = c.checked ? [...q.formats, s] : q.formats.filter((x) => x !== s); q.page = 1; writeQuery(q); load(); });
     fEl.querySelectorAll("[data-l]").forEach((c) => c.onchange = () => { const s = c.dataset.l; q.languages = c.checked ? [...q.languages, s] : q.languages.filter((x) => x !== s); q.page = 1; writeQuery(q); load(); });
     fEl.querySelectorAll("[data-b]").forEach((c) => c.onchange = () => { const s = c.dataset.b; q.bands = c.checked ? [...q.bands, s] : q.bands.filter((x) => x !== s); q.page = 1; writeQuery(q); load(); });
+    const clearBtn = fEl.querySelector("[data-clear]");
+    if (clearBtn) clearBtn.onclick = () => {
+      q.venues = []; q.formats = []; q.languages = []; q.bands = []; q.search = ""; q.page = 1;
+      writeQuery(q); drawFilters(); load(); // date intentionally kept
+    };
   }
 
   function drawToolbar(meta) {
@@ -100,7 +108,11 @@ export async function renderSessions(root) {
       const groups = res.data || [];
       const meta = res.meta;
       if (!groups.length) {
-        listEl.innerHTML = `<div class="empty">Check the spelling or try another film.</div>`;
+        listEl.innerHTML = `<div class="empty">Check the spelling or try another film.<br/><br/><button class="btn ghost small" data-clear2>Clear All Filters</button></div>`;
+        listEl.querySelector("[data-clear2]").onclick = () => {
+          q.venues = []; q.formats = []; q.languages = []; q.bands = []; q.search = ""; q.page = 1;
+          writeQuery(q); drawFilters(); load();
+        };
       } else {
         listEl.innerHTML = "";
         for (const g of groups) {

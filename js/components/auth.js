@@ -1,18 +1,8 @@
 import { apiFetch, setToken, setPendingAction, consumePendingAction, fieldErrors } from "../api.js";
 import { store } from "../store.js";
 import { el, toast } from "../utils.js";
-import { openModal, setLoading } from "./modal.js";
-
-function emailValid(v) {
-  if (!v) return "Email is required";
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return "Please enter a valid email";
-  return "";
-}
-function passValid(v) {
-  if (!v) return "Password is required";
-  if (v.length < 3) return "Password must be at least 3 characters";
-  return "";
-}
+import { emailError, passwordError, usernameError } from "../validation.js";
+import { openModal, setLoading, attachBlurValidation } from "./modal.js";
 
 export function openLoginModal(pending = null) {
   if (pending) setPendingAction(pending);
@@ -29,14 +19,12 @@ export function openLoginModal(pending = null) {
   const email = box.querySelector('[name=email]');
   const pass = box.querySelector('[name=password]');
   const serverErr = box.querySelector('[data-server]');
+  const checkEmail = attachBlurValidation(email, emailError);
+  const checkPass = attachBlurValidation(pass, passwordError);
   box.querySelector("[data-switch]").onclick = () => { close(); openRegisterModal(); };
   box.querySelector("[data-submit]").onclick = async (e) => {
     const btn = e.currentTarget;
-    if (emailValid(email.value) || passValid(pass.value)) {
-      serverErr.textContent = emailValid(email.value) || passValid(pass.value);
-      email.classList.add("invalid"); pass.classList.add("invalid");
-      return;
-    }
+    if (checkEmail() || checkPass()) return;
     setLoading(btn, true);
     serverErr.textContent = "";
     try {
@@ -80,16 +68,18 @@ export function openRegisterModal() {
     box.querySelector(".avatar-box").textContent = "✓";
   });
   box.querySelector("[data-switch]").onclick = () => { close(); openLoginModal(); };
+  const checkUser = attachBlurValidation(q("username"), (v) => usernameError(v));
+  const checkEmail2 = attachBlurValidation(q("email"), emailError);
+  const checkPass2 = attachBlurValidation(q("password"), passwordError);
+  const checkConfirm = attachBlurValidation(q("confirm"), (v) => (v !== q("password").value ? "Passwords must match" : ""));
   box.querySelector("[data-submit]").onclick = async (e) => {
     const btn = e.currentTarget;
+    const bad = [checkUser(), checkEmail2(), checkPass2(), checkConfirm()].some(Boolean);
+    if (bad) return;
     const username = q("username").value.trim();
     const email = q("email").value.trim();
     const password = q("password").value;
     const confirm = q("confirm").value;
-    if (!username || username.length < 3) { serverErr.textContent = "Username must be at least 3 characters"; return; }
-    if (emailValid(email)) { serverErr.textContent = emailValid(email); return; }
-    if (passValid(password)) { serverErr.textContent = passValid(password); return; }
-    if (confirm !== password) { serverErr.textContent = "Passwords must match"; return; }
     const fd = new FormData();
     fd.append("username", username); fd.append("email", email);
     fd.append("password", password); fd.append("password_confirmation", confirm);
@@ -110,7 +100,15 @@ export function openRegisterModal() {
       } else if (pending) replayPending(pending);
     } catch (err) {
       const fe = fieldErrors(err);
-      serverErr.textContent = fe ? Object.entries(fe).map(([k, v]) => `${k}: ${v.join(", ")}`).join(" | ") : (err.payload?.message || err.message);
+      if (fe) {
+        const keyMap = { username: "username", email: "email", password: "password", password_confirmation: "confirm" };
+        let mapped = false;
+        for (const [k, msgs] of Object.entries(fe)) {
+          const inp = keyMap[k] ? q(keyMap[k]) : null;
+          if (inp) { inp.classList.add("invalid"); inp.parentElement.querySelector(".err").textContent = msgs.join(", "); mapped = true; }
+        }
+        if (!mapped) serverErr.textContent = Object.entries(fe).map(([k, v]) => `${k}: ${v.join(", ")}`).join(" | ");
+      } else serverErr.textContent = err.payload?.message || err.message;
     } finally { setLoading(btn, false); }
   };
 }
