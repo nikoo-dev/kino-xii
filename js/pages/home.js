@@ -1,7 +1,9 @@
 import { apiFetch } from "../api.js";
-import { el, esc, toast, getRecent } from "../utils.js";
+import { el, esc, toast, getRecent, fmtReleaseDay, fmtReleaseWeek } from "../utils.js";
 import { requireAuthOrModal } from "../components/auth.js";
 import { store } from "../store.js";
+
+let heroTimer = null;
 
 export async function renderHome(root) {
   root.innerHTML = `<div class="skeleton" style="height:420px"></div><div class="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>`;
@@ -22,7 +24,7 @@ export async function renderHome(root) {
       hero.innerHTML = `
         ${f.backdropUrl ? `<img class="hero-bg" src="${esc(f.backdropUrl)}" alt="" />` : ""}
         <div class="hero-content">
-          <span class="kicker">Premiere · Week of 15 Sept</span>
+          <span class="kicker">Premiere · ${esc(fmtReleaseWeek(f.releaseDate) || "Now showing")}</span>
           <h1>${esc(f.title)}</h1>
           <p>${esc(f.synopsis || "")}</p>
           <div class="hero-meta">
@@ -43,9 +45,10 @@ export async function renderHome(root) {
       hero.querySelector("[data-next]").onclick = () => { idx = (idx + 1) % films.length; drawHero(); };
     }
     drawHero();
+    if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
     if (films.length > 1) {
-      setInterval(() => {
-        if (!document.body.contains(hero)) return;
+      heroTimer = setInterval(() => {
+        if (!document.body.contains(hero)) { clearInterval(heroTimer); heroTimer = null; return; }
         idx = (idx + 1) % films.length;
         drawHero();
       }, 7000);
@@ -76,7 +79,7 @@ export async function renderHome(root) {
       const card = el(`<div class="coming-card">
         <img loading="lazy" src="${esc(m.posterUrl || "")}" alt="" />
         <div>
-          <span class="overline">In cinemas 2 October</span>
+          <span class="overline">In cinemas ${esc(fmtReleaseDay(m.releaseDate) || "soon")}</span>
           <div style="font-weight:800;margin:4px 0">${esc(m.title)}</div>
           <div class="meta">Drama · ${m.runtimeMinutes || 134} min</div>
           <div style="margin:8px 0"><span class="badge red">${esc(m.ageRating?.code || "12+")}</span></div>

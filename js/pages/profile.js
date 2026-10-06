@@ -30,6 +30,7 @@ export async function renderProfile(root) {
     const u = store.user;
     const venues = store.filterOptions?.venues || [];
     bodyEl.innerHTML = `<div class="profile-grid"><div>
+      <div class="avatar-upload" data-avatar-row style="cursor:pointer"><div class="avatar-box" data-avatar-prev>${u.avatarUrl ? `<img src="${esc(u.avatarUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:12px" />` : esc((u.username || "U")[0].toUpperCase())}</div><div><b>Upload avatar (optional)</b><div class="meta">JPG, PNG or WEBP, max 2MB</div></div><input name="avatar" type="file" accept=".jpg,.jpeg,.png,.webp" style="display:none" /></div>
       <div class="field"><label>Full name</label><input name="fullName" value="${esc(u.fullName || "")}" /><div class="err"></div></div>
       <div class="field"><label>Email</label><input name="email" value="${esc(u.email || "")}" disabled /><div class="err"></div><div class="meta">Set at registration and cannot be changed</div></div>
       <div class="field"><label>Mobile number</label><input name="mobileNumber" value="${esc(u.mobileNumber || "")}" placeholder="555 123 456" /><div class="err"></div></div>
@@ -38,6 +39,23 @@ export async function renderProfile(root) {
       <div class="form-footer"><button class="btn primary" data-save disabled style="width:auto;padding:12px 32px">Save changes</button></div>
     </div></div>`;
     const saveBtn = bodyEl.querySelector("[data-save]");
+    const avatarInput = bodyEl.querySelector("[name=avatar]");
+    const avatarRow = bodyEl.querySelector("[data-avatar-row]");
+    const avatarPrev = bodyEl.querySelector("[data-avatar-prev]");
+    avatarRow.onclick = (e) => { if (e.target !== avatarInput) avatarInput.click(); };
+    avatarInput.addEventListener("change", () => {
+      const f = avatarInput.files[0];
+      const errEl = avatarRow.parentElement.querySelector(".err");
+      if (!f) return;
+      if (!["image/jpeg", "image/png", "image/webp"].includes(f.type)) {
+        if (errEl) errEl.textContent = "Invalid format. Use jpg, png, WebP.";
+        else toast("Invalid format. Use jpg, png, WebP.");
+        avatarInput.value = "";
+        return;
+      }
+      avatarPrev.innerHTML = `<img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover;border-radius:12px" />`;
+      refreshSave();
+    });
     const fields = {
       fullName: bodyEl.querySelector("[name=fullName]"),
       mobileNumber: bodyEl.querySelector("[name=mobileNumber]"),
@@ -58,6 +76,7 @@ export async function renderProfile(root) {
         mobileNumber: fields.mobileNumber.value,
         dateOfBirth: fields.dateOfBirth.value,
         preferredVenueId: bodyEl.querySelector("[name=preferredVenueId]").value,
+        avatar: avatarInput.files[0] ? avatarInput.files[0].name : "",
       };
     }
     function refreshSave() {
@@ -84,6 +103,8 @@ export async function renderProfile(root) {
       fd.append("dateOfBirth", bodyEl.querySelector("[name=dateOfBirth]").value);
       const pv = bodyEl.querySelector("[name=preferredVenueId]").value;
       if (pv) fd.append("preferredVenueId", pv);
+      const av = avatarInput.files[0];
+      if (av) fd.append("avatar", av);
       try {
         const res = await apiFetch("/profile", { method: "PUT", auth: true, formData: fd });
         store.setUser(res.data);

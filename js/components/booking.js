@@ -7,11 +7,13 @@ import { requireAuthOrModal } from "./auth.js";
 
 export async function openBookingModal(sessionId) {
   if (!requireAuthOrModal({ type: "openBooking", sessionId })) return;
+  const holdKey = `kinoxii_hold_${sessionId}`;
   const wrap = el(`<div><p>Loading session...</p><div class="skeleton"></div></div>`);
   const { close, box } = openModal(wrap, {
     wide: true,
     onClose: () => {
       if (state.holdId && !state.paid) apiFetch(`/holds/${state.holdId}`, { method: "DELETE", auth: true }).catch(() => {});
+      try { sessionStorage.removeItem(holdKey); } catch {}
       if (state.timer) clearInterval(state.timer);
     },
   });
@@ -33,6 +35,26 @@ export async function openBookingModal(sessionId) {
     box.querySelector("[data-close-link]").onclick = () => close();
     return;
   }
+  // Resume a live hold after reload (GET /holds/{hold})
+  try {
+    const stored = sessionStorage.getItem(holdKey);
+    if (stored) {
+      const hRes = await apiFetch(`/holds/${stored}`, { auth: true });
+      const h = hRes.data;
+      if (h?.isLive && String(h.sessionId) === String(sessionId)) {
+        state.holdId = stored; state.expiresAt = h.expiresAt; state.hold = h;
+        const byId = new Map();
+        for (const sec of state.seats.sections || []) for (const row of sec.rows || []) for (const st of row.seats || []) byId.set(st.id, st);
+        for (const s of h.seats || []) {
+          const seat = byId.get(s.seatId) || { id: s.seatId, code: s.code, label: s.code };
+          state.selected.set(s.seatId, { seat, ticketType: s.ticketType?.slug || s.ticketType || "adult" });
+        }
+        renderStep2(true);
+        return;
+      }
+      sessionStorage.removeItem(holdKey);
+    }
+  } catch { try { sessionStorage.removeItem(holdKey); } catch {} }
   renderStep1();
 
   function headerHtml(timerHtml = "") {
@@ -108,6 +130,7 @@ export async function openBookingModal(sessionId) {
         const seats = [...state.selected.entries()].map(([seatId, v]) => ({ seatId, ticketType: v.ticketType }));
         const res = await apiFetch(`/sessions/${sessionId}/holds`, { method: "POST", auth: true, body: { seats } });
         state.holdId = res.data.holdId || res.data.id; state.expiresAt = res.data.expiresAt; state.hold = res.data;
+        try { sessionStorage.setItem(holdKey, state.holdId); } catch {}
         renderStep2();
       } catch (err) {
         if (err.status === 409) {
@@ -124,9 +147,10 @@ export async function openBookingModal(sessionId) {
     };
   }
 
-  function renderStep2() {
+  function renderStep2(resumed = false) {
     state.step = 2;
     box.innerHTML = `${headerHtml(`<div class="timer-box"><b>SEATS HELD</b><span class="timer" data-timer>8:00</span></div>`)}
+    ${resumed ? `<div class="banner ok">Hold resumed — your seats are still held.</div>` : ""}
     <div class="booking-grid"><div><h3>Checkout</h3><div data-sum2></div>
       <div class="field"><label>Full Name</label><input name="fullName" value="${esc(store.user.fullName || "")}" /><div class="err"></div></div>
       <div class="field"><label>Email</label><input name="email" value="${esc(store.user.email || "")}" /><div class="err"></div></div>
@@ -147,7 +171,7 @@ export async function openBookingModal(sessionId) {
       const ms = new Date(state.expiresAt).getTime() - Date.now();
       const s = Math.max(0, Math.floor(ms / 1000));
       timerEl.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-      if (s <= 0) { clearInterval(state.timer); state.holdId = null; state.selected.clear(); apiFetch(`/sessions/${sessionId}/seats`).then((r) => { state.seats = r.data; }).finally(() => renderStep1("Your hold time expired. Please re-select your seats.")); }
+      if (s <= 0) { clearInterval(state.timer); state.holdId = null; state.selected.clear(); try { sessionStorage.removeItem(holdKey); } catch {} apiFetch(`/sessions/${sessionId}/seats`).then((r) => { state.seats = r.data; }).finally(() => renderStep1("Your hold time expired. Please re-select your seats.")); }
     };
     if (state.timer) clearInterval(state.timer);
     state.timer = setInterval(tick, 1000); tick();
@@ -168,13 +192,23 @@ export async function openBookingModal(sessionId) {
       try {
         const res = await apiFetch("/orders", { method: "POST", auth: true, body: { holdId: state.holdId, fullName: g("fullName"), email: g("email"), mobileNumber: g("mobileNumber"), cardNumber: g("cardNumber"), expiry: g("expiry"), cvv: g("cvv") } });
         state.paid = true; clearInterval(state.timer);
+        try { sessionStorage.removeItem(holdKey); } catch {}
         box.innerHTML = `<h2>Order paid ✓</h2><p>Reference: <b>${esc(res.data.reference)}</b></p>${(res.data.tickets || []).map((t) => `<div class="session-card" style="margin-bottom:8px"><div class="time-row"><b>${esc(t.seatCode)}</b><span>${esc(t.ticketType?.name)}</span><b>₾${t.price}</b></div></div>`).join("")}<p>Total paid: ₾${res.data.totalPrice}</p><div class="form-footer"><a class="btn primary" href="#/profile">My Tickets</a></div>`;
       } catch (err) {
         if (err.status === 422 && err.payload?.errors) for (const [k, msgs] of Object.entries(err.payload.errors)) {
           const inp = box.querySelector(`[name=${k}]`);
           if (inp) { inp.classList.add("invalid"); inp.parentElement.querySelector(".err").textContent = msgs.join(", "); }
         }
-        else if (err.status === 422) { box.querySelector("[data-server]").textContent = err.payload?.message || err.message; }
+        else if (err.status === 422) {
+          box.querySelector("[data-server]").textContent = err.payload?.message || err.message;
+          if (/expired/i.test(err.payload?.message || "")) {
+            setTimeout(() => {
+              state.holdId = null; state.selected.clear();
+              try { sessionStorage.removeItem(holdKey); } catch {}
+              renderStep1("Your hold time expired. Please re-select your seats.");
+            }, 1200);
+          }
+        }
         else box.querySelector("[data-server]").textContent = err.payload?.message || err.message;
       } finally { setLoading(btn, false); }
     };

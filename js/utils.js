@@ -38,7 +38,19 @@ export function next7Days() {
   return out;
 }
 const RV_KEY = "kinoxii_recently_viewed";
-export function pushRecent(movie) {
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+export function fmtReleaseDay(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
+  if (isNaN(d.getTime())) return "";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+export function fmtReleaseWeek(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
+  if (isNaN(d.getTime())) return "";
+  return `WEEK OF ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 4).toUpperCase()}`;
+}export function pushRecent(movie) {
   try {
     const arr = JSON.parse(localStorage.getItem(RV_KEY) || "[]");
     const filtered = arr.filter((m) => m.slug !== movie.slug);
