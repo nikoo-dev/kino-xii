@@ -107,7 +107,7 @@ export async function openBookingModal(sessionId) {
       try {
         const seats = [...state.selected.entries()].map(([seatId, v]) => ({ seatId, ticketType: v.ticketType }));
         const res = await apiFetch(`/sessions/${sessionId}/holds`, { method: "POST", auth: true, body: { seats } });
-        state.holdId = res.data.id; state.expiresAt = res.data.expiresAt; state.hold = res.data;
+        state.holdId = res.data.holdId || res.data.id; state.expiresAt = res.data.expiresAt; state.hold = res.data;
         renderStep2();
       } catch (err) {
         if (err.status === 409) {
