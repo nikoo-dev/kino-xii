@@ -1,4 +1,4 @@
-import { el } from "./utils.js";
+import { el } from "../utils.js";
 
 const root = () => document.getElementById("modal-root");
 

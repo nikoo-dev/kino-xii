@@ -114,9 +114,9 @@ export async function renderSessions(root) {
             const leftCls = s.isSoldOut ? "" : (left <= 5 ? "low" : "ok");
             const leftTxt = s.isSoldOut ? "Sold out" : `◆ ${left} left`;
             const row = el(`<div class="session-card ${cls}">
-              <div class="time-row"><span class="time">${esc(s.startTime || s.time || "")}</span><span class="badge">${esc(s.format?.name || "Standard")}</span></div>
+              <div class="time-row"><span class="time">${esc(s.time || s.startTime || "")}</span><span class="badge">${esc(s.format?.name || "Standard")}</span></div>
               <div class="meta" style="margin:8px 0">Original + Subtitles</div>
-              <div class="time-row"><span class="meta">${esc(s.venue?.name || "")} · Hall ${esc(s.hall || "D")}</span></div>
+              <div class="time-row"><span class="meta">${esc(s.venue?.name || "")} · Hall ${esc(s.hall?.name || s.hall || "D")}</span></div>
               <div class="time-row" style="margin-top:8px"><span class="seats-left ${leftCls}">${leftTxt}</span><b>₾${s.price ?? 22}</b></div>
             </div>`);
             if (!s.isSoldOut) {

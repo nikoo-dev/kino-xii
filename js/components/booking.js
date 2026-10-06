@@ -38,7 +38,7 @@ export async function openBookingModal(sessionId) {
     const s = state.session;
     return `<div style="display:flex;gap:16px;align-items:start">
       <div><h2 style="text-transform:uppercase">${esc(s.movie?.title || "")}</h2>
-      <div class="meta">${esc(s.venue?.name || "")} · Hall ${esc(s.hall || "B")} · ${esc(s.date || "")} · ${esc(s.startTime || "")} · ${esc(s.format?.name || "")} · ${esc(s.language?.name || "Original + Subtitles")}</div></div>
+      <div class="meta">${esc(s.venue?.name || "")} · Hall ${esc(s.hall?.name || s.hall || "B")} · ${esc(s.date || "")} · ${esc(s.time || s.startTime || "")} · ${esc(s.format?.name || "")} · ${esc(s.language?.name || "Original + Subtitles")}</div></div>
       ${timerHtml}
     </div>
     <div class="booking-steps"><div class="${state.step === 1 ? "active" : ""}">SEATS</div><div class="${state.step === 2 ? "active" : ""}">CHECKOUT</div></div>`;

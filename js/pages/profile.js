@@ -91,8 +91,8 @@ export async function renderProfile(root) {
         const seatBadges = (o.tickets || []).map((t) => `<span class="seat-badge">${esc(t.seatCode)} · ${esc(t.ticketType?.name || "")}</span>`).join("");
         const card = el(`<div class="order-card"><img src="${esc(o.session?.movie?.posterUrl || "")}" />
           <div class="order-main"><div class="order-title">${esc((o.session?.movie?.title || "").toUpperCase())} <span class="badge red">${esc(o.session?.movie?.ageRating?.code || "12+")}</span> <span class="meta">${o.session?.movie?.runtimeMinutes || 134} min</span></div>
-          <div class="order-cols"><div><span class="overline">Date</span><b>${esc(o.session?.date || "")} · ${esc(o.session?.startTime || "")}</b></div>
-          <div><span class="overline">Venue</span><b>${esc(o.session?.venue?.name || "")} · Hall ${esc(o.session?.hall || "B")}</b></div>
+          <div class="order-cols"><div><span class="overline">Date</span><b>${esc(o.session?.date || "")} · ${esc(o.session?.time || o.session?.startTime || "")}</b></div>
+          <div><span class="overline">Venue</span><b>${esc(o.session?.venue?.name || "")} · Hall ${esc(o.session?.hall?.name || o.session?.hall || "B")}</b></div>
           <div><span class="overline">Format</span><b>${esc(o.session?.format?.name || "MAX")} · ${esc(o.session?.language?.name || "Original + Subtitles")}</b></div></div>
           <div class="order-seats"><span class="overline">Seats</span><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${seatBadges}</div></div></div>
           <div class="order-side"><span class="overline">Order<br/>#${esc(o.reference)}</span><div class="order-total"><span class="meta">Total paid</span><b>₾${o.totalPrice}</b></div>

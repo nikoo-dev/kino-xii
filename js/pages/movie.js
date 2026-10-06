@@ -66,7 +66,7 @@ export async function renderMovie(root, slug) {
           const cards = gd.querySelector(".session-cards");
           for (const s of g.sessions || []) {
             const row = el(`<div class="session-card ${s.isSoldOut ? "soldout" : ""}">
-              <div class="time-row"><span class="time">${esc(s.startTime || "")}</span><span style="color:var(--brand-red);font-weight:800">₾ ${s.price ?? 16}</span></div>
+              <div class="time-row"><span class="time">${esc(s.time || s.startTime || "")}</span><span style="color:var(--brand-red);font-weight:800">₾ ${s.price ?? 16}</span></div>
               <div class="time-row" style="margin-top:8px"><span class="meta">ENG <span class="badge">${esc(s.format?.name || "MAX")}</span></span><span class="meta">◆ ${s.seatsLeft ?? 45} left</span></div>
             </div>`);
             if (!s.isSoldOut) row.onclick = () => {
